@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f5fbf">
+<meta name="description" content="일일 사용 자재를 기록하고 CSV로 내보내는 오프라인 자재 관리 앱">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="자재 입력">
+<link rel="manifest" href="./ecount-manifest.webmanifest">
+<link rel="icon" type="image/png" href="./ecount-icons/icon-192.png">
+<link rel="apple-touch-icon" href="./ecount-icons/apple-touch-icon.png">
+<title>일일 사용 자재 입력</title>
+<style>
+:root{--bg:#f2f5fa;--card:#fff;--tx:#1b2433;--sub:#6b7686;--pri:#1f5fbf;--pri2:#e6efff;--line:#dde3ec;--ok:#16a34a;--bad:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#0f141c;--card:#18202b;--tx:#e8edf5;--sub:#93a0b3;--pri:#5b9bff;--pri2:#1c2b46;--line:#2a3544}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:16px;padding-bottom:84px}
+header{background:var(--pri);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:18px;margin:0}
+header small{opacity:.85}
+main{padding:12px;max-width:640px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:15px;margin:0 0 10px}
+label{display:block;font-size:13px;color:var(--sub);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--bg);color:var(--tx);font-family:inherit}
+textarea{min-height:60px;resize:vertical}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:12px 4px;border:1px solid var(--line);background:var(--bg);color:var(--tx);border-radius:10px;font-size:15px}
+.seg button.on{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:700}
+.btn{width:100%;padding:14px;border:0;border-radius:12px;background:var(--pri);color:#fff;font-size:17px;font-weight:700;margin-top:14px}
+.btn.sec{background:var(--pri2);color:var(--pri)}
+.btn.sm{width:auto;padding:8px 12px;font-size:14px;margin:0}
+.btn.bad{background:transparent;color:var(--bad);border:1px solid var(--bad)}
+.qty{display:flex;gap:6px}.qty button{width:48px;border:1px solid var(--line);background:var(--bg);color:var(--tx);border-radius:10px;font-size:22px}
+.qty input{text-align:center;font-weight:700}
+.item{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item b{display:block}.item span{color:var(--sub);font-size:13px}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:var(--pri2);color:var(--pri);margin-right:4px}
+.q{font-weight:800;font-size:17px;white-space:nowrap}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);z-index:6}
+nav button{flex:1;padding:12px 0 14px;border:0;background:none;color:var(--sub);font-size:12px}
+nav button.on{color:var(--pri);font-weight:700}
+nav button i{display:block;font-style:normal;font-size:20px}
+.hide{display:none}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:9}
+.toast.show{opacity:.95}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--pri2);color:var(--pri);padding:6px 10px;border-radius:99px;margin:3px;font-size:14px}
+.chip a{color:var(--bad);font-weight:700;cursor:pointer}
+.note{font-size:12px;color:var(--sub);line-height:1.5}
+.empty{text-align:center;color:var(--sub);padding:18px 0}
+/* 휴대폰 홈 화면과 화면 확대를 지원합니다. */
+body{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
+header{padding-top:calc(14px + env(safe-area-inset-top));gap:12px}
+header h1{font-size:17px}header small{white-space:nowrap;font-size:12px}
+main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+nav{padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+nav button{min-height:64px;font-family:inherit}
+.row>*{min-width:0}.item>div:first-child{min-width:0;overflow-wrap:anywhere}
+button{cursor:pointer;font-family:inherit;touch-action:manipulation}
+button:disabled{opacity:.6;cursor:wait}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--pri);outline-offset:3px}
+.btn.sm,.qty button,.text-action{min-height:44px;min-width:44px}
+.text-action{border:0;background:none;color:var(--bad);font-size:13px;padding:8px;flex-shrink:0}
+.chip .text-action{padding:4px;min-width:36px;min-height:36px}
+.app-status{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--sub);margin:2px 2px 12px}
+.app-status span{flex:1}.app-status button{margin:0}
+.app-status[data-offline="true"]{color:var(--tx)}
+.install-help{font-size:14px;line-height:1.7;margin-top:14px}
+.install-help summary{cursor:pointer;min-height:44px;padding:8px 0;color:var(--pri);font-weight:700}
+.install-help p{margin:8px 0}.install-help ol{padding-left:22px}
+.toast{bottom:calc(96px + env(safe-area-inset-bottom));max-width:calc(100% - 24px);width:max-content;border-radius:12px;text-align:center}
+@media(max-width:360px){header{align-items:flex-start;flex-direction:column;gap:4px}.row{flex-wrap:wrap}.row>div{flex-basis:100%}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header><h1>📦 일일 사용 자재 입력</h1><small id="hdate"></small></header>
+<main>
+<div class="app-status" id="app-status" role="status" aria-live="polite">
+  <span id="connection-status">앱을 준비하고 있습니다…</span>
+  <button class="btn sm sec hide" id="app-update" type="button">앱 업데이트</button>
+</div>
+
+<!-- 입력 -->
+<section id="p-in">
+  <div class="card">
+    <h2>① 누구인가요?</h2>
+    <label for="dept">부서</label>
+    <select id="dept"></select>
+    <label for="name">이름</label>
+    <select id="name"></select>
+    <label for="date">사용 날짜</label>
+    <input type="date" id="date">
+  </div>
+
+  <div class="card">
+    <h2>② 무엇을 사용했나요?</h2>
+    <div class="seg" id="cat">
+      <button data-v="재료" class="on" aria-pressed="true">재료</button><button data-v="부품" aria-pressed="false">부품</button><button data-v="기구" aria-pressed="false">기구</button>
+    </div>
+    <label for="iname">품목명 (등록된 품목은 자동완성)</label>
+    <input id="iname" list="itemlist" placeholder="품목명 입력 또는 선택" autocomplete="off">
+    <datalist id="itemlist"></datalist>
+    <div class="row">
+      <div><label for="icode">품목코드 (이카운트)</label>
+    <input id="icode" placeholder="선택"></div>
+      <div><label for="unit">단위</label>
+    <input id="unit" value="EA"></div>
+    </div>
+    <label for="qty">수량</label>
+    <div class="qty"><button id="qm" type="button" aria-label="수량 1 줄이기">−</button><input id="qty" type="number" inputmode="decimal" value="1" min="0" step="any"><button id="qp" type="button" aria-label="수량 1 늘리기">＋</button></div>
+    <label for="ref">A/S 번호 · 고객/현장 (선택)</label>
+    <input id="ref" placeholder="예) AS-2610-015 / OO상사">
+    <label for="memo">메모 (선택)</label>
+    <textarea id="memo" placeholder="사용 사유, 특이사항 등"></textarea>
+    <button class="btn" id="add">＋ 추가하기</button>
+  </div>
+
+  <div class="card">
+    <h2>선택한 날짜의 내 입력 내역 <span id="mycount" class="tag"></span></h2>
+    <div id="mylist"></div>
+  </div>
+</section>
+
+<!-- 전체 내역 -->
+<section id="p-list" class="hide">
+  <div class="card">
+    <h2>조회</h2>
+    <div class="row">
+      <div><label for="f1">시작일</label>
+    <input type="date" id="f1"></div>
+      <div><label for="f2">종료일</label>
+    <input type="date" id="f2"></div>
+    </div>
+    <div class="row">
+      <div><label for="fd">부서</label>
+    <select id="fd"></select></div>
+      <div><label for="fc">구분</label>
+    <select id="fc"><option value="">전체</option><option>재료</option><option>부품</option><option>기구</option></select></div>
+    </div>
+  </div>
+  <div class="card"><h2>합계 <span id="sumtag" class="tag"></span></h2><div id="sum"></div></div>
+  <div class="card"><h2>상세 내역</h2><div id="alllist"></div></div>
+  <div class="card">
+    <h2>이카운트로 보내기</h2>
+    <p class="note">조회된 내역을 CSV로 저장합니다. 컬럼: 일자, 부서, 작성자, 구분, 품목코드, 품목명, 수량, 단위, A/S번호·고객, 메모. 관리자가 이카운트의 「엑셀 업로드」(재고 출고/자재사용, A/S 입력) 양식에 맞춰 붙여넣어 올리면 됩니다.</p>
+    <button class="btn" id="csv">⬇ CSV 저장 (엑셀 호환)</button>
+    <button class="btn sec" id="copy">📋 표 복사 (이카운트 붙여넣기용)</button>
+  </div>
+</section>
+
+<!-- 설정 -->
+<section id="p-set" class="hide">
+  <div class="card">
+    <h2>휴대폰에 앱 설치</h2>
+    <p class="note" id="install-status">홈 화면에 추가하면 앱처럼 바로 열 수 있습니다.</p>
+    <button class="btn sec" id="install-app" type="button">홈 화면에 추가</button>
+    <details class="install-help" id="install-help">
+      <summary>설치 방법 보기</summary>
+      <p><b>안드로이드</b>: Chrome에서 이 페이지를 연 뒤 ‘홈 화면에 추가’를 누르세요. 설치 창이 뜨지 않으면 Chrome 메뉴의 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택하세요.</p>
+      <p><b>아이폰</b>: Safari에서 이 페이지를 연 뒤 공유 버튼 → ‘홈 화면에 추가’ → ‘추가’를 누르세요. ‘웹 앱으로 열기’가 표시되면 켜세요.</p>
+      <p>처음에는 인터넷에 연결해 앱을 열고, 상단의 ‘오프라인 사용 준비 완료’를 확인하세요. 이후에는 인터넷 없이 입력할 수 있습니다.</p>
+      <p>설치한 앱에서 설정·내역을 확인하세요. 보이지 않으면 기존 브라우저에서 JSON 백업을 저장한 뒤 앱에서 복원하세요.</p>
+    </details>
+  </div>
+  <div class="card">
+    <h2>부서 · 직원 관리</h2>
+    <label for="newdept">부서 추가</label>
+    <div class="row"><input id="newdept" placeholder="부서명"><button class="btn sm" id="adddept" style="flex:0 0 76px">추가</button></div>
+    <label for="sdept">직원 추가할 부서</label>
+    <select id="sdept"></select>
+    <div class="row" style="margin-top:8px"><input aria-label="추가할 직원 이름" id="newname" placeholder="이름"><button class="btn sm" id="addname" style="flex:0 0 76px">추가</button></div>
+    <div id="orgview" style="margin-top:10px"></div>
+    <p class="note">처음 사용 시 예시 부서가 들어 있습니다. 회사 부서/직원으로 바꿔 주세요. 부서 이름 옆 ✕로 부서 전체를 삭제할 수 있습니다.</p>
+  </div>
+  <div class="card">
+    <h2>품목 마스터 (자주 쓰는 품목)</h2>
+    <label for="mcat">구분</label>
+    <select id="mcat"><option>재료</option><option>부품</option><option>기구</option></select>
+    <div class="row"><div><label for="mcode">품목코드</label>
+    <input id="mcode"></div><div><label for="munit">단위</label>
+    <input id="munit" value="EA"></div></div>
+    <label for="mname">품목명</label>
+    <input id="mname">
+    <button class="btn sec" id="addmaster">품목 등록</button>
+    <label style="margin-top:14px" for="mfile">이카운트 품목 CSV 불러오기 (코드,품목명,단위,구분)</label>
+    <input type="file" id="mfile" accept=".csv,.txt">
+    <div id="masterview" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <h2>데이터</h2>
+    <button class="btn sec" id="backup">설정·내역 백업 저장(JSON)</button>
+    <input aria-label="JSON 백업 파일 복원" type="file" id="restore" accept=".json" style="margin-top:8px">
+    <button class="btn bad" id="clearall" style="margin-top:10px;width:100%;padding:12px">전체 내역 삭제</button>
+    <p class="note">모든 데이터는 이 휴대폰 브라우저 안에 저장됩니다. 서버로 자동 전송되지 않으므로 정기적으로 CSV 저장 후 이카운트에 업로드하세요. 브라우저 데이터를 지우면 내역도 삭제되니 백업을 권장합니다.</p>
+  </div>
+</section>
+</main>
+
+<nav aria-label="주요 메뉴">
+  <button data-p="p-in" class="on" aria-current="page"><i>✏️</i>입력</button>
+  <button data-p="p-list"><i>📋</i>내역·내보내기</button>
+  <button data-p="p-set"><i>⚙️</i>설정</button>
+</nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const KEY='ecount_usage_v1';
+const today=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
+let S, savedState, toastTimer;
+function validData(d){
+  return d && typeof d.org==='object' && d.org!==null && !Array.isArray(d.org)
+    && Object.values(d.org).every(ns=>Array.isArray(ns)&&ns.every(n=>typeof n==='string'))
+    && Array.isArray(d.master) && d.master.every(m=>m&&['id','name','code','unit','cat'].every(k=>typeof m[k]==='string')&&['재료','부품','기구'].includes(m.cat))
+    && Array.isArray(d.rec) && d.rec.every(r=>r&&['id','date','dept','who','cat','code','item','unit','ref','memo'].every(k=>typeof r[k]==='string')&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&['재료','부품','기구'].includes(r.cat)&&Number.isFinite(r.qty)&&r.qty>0)
+    && d.me && typeof d.me==='object' && !Array.isArray(d.me);
+}
+function load(){
+  try{const d=JSON.parse(localStorage.getItem(KEY));if(d){if(!validData(d))throw Error();S=d}}catch(e){toast('저장된 데이터를 읽지 못했습니다. 설정에서 백업 파일을 복원하세요.')}
+  if(!S)S={org:{"생산":["홍길동"],"품질":[],"A/S":[],"영업":[]},master:[],rec:[],me:{}};
+  savedState=JSON.stringify(S);
+}
+function save(){try{const next=JSON.stringify(S);localStorage.setItem(KEY,next);savedState=next;return true}catch(e){S=JSON.parse(savedState);toast('저장하지 못했습니다. 저장공간과 브라우저 설정을 확인하세요.');return false}}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3500)}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+let cat='재료';
+
+function fillOrg(){
+  const ds=Object.keys(S.org);
+  $('#dept').innerHTML=ds.map(d=>`<option>${esc(d)}</option>`).join('');
+  if(S.me.dept&&ds.includes(S.me.dept))$('#dept').value=S.me.dept;
+  fillNames();
+  $('#sdept').innerHTML=$('#dept').innerHTML;
+  $('#fd').innerHTML='<option value="">전체</option>'+$('#dept').innerHTML;
+}
+function fillNames(){
+  const ns=S.org[$('#dept').value]||[];
+  $('#name').innerHTML=ns.length?ns.map(n=>`<option>${esc(n)}</option>`).join(''):'<option value="">(설정에서 직원 추가)</option>';
+  if(S.me.name&&ns.includes(S.me.name))$('#name').value=S.me.name;
+}
+function fillMaster(){
+  $('#itemlist').innerHTML=S.master.filter(m=>m.cat===cat).map(m=>`<option value="${esc(m.name)}">${esc(m.code)} ${esc(m.unit)}</option>`).join('');
+}
+function renderOrg(){
+  $('#orgview').innerHTML=Object.entries(S.org).map(([d,ns])=>
+    `<div style="margin-bottom:8px"><b>${esc(d)}</b> <button type="button" class="text-action" data-deld="${esc(d)}">부서 삭제</button><br>`+
+    (ns.map(n=>`<span class="chip">${esc(n)} <button type="button" class="text-action" aria-label="${esc(n)} 직원 삭제" data-deln="${esc(d)}|${esc(n)}">✕</button></span>`).join('')||'<span class="note">직원 없음</span>')+'</div>').join('');
+}
+function renderMaster(){
+  $('#masterview').innerHTML=S.master.length?S.master.map(m=>
+    `<div class="item"><div><b>${esc(m.name)}</b><span><span class="tag">${esc(m.cat)}</span>${esc(m.code)} · ${esc(m.unit)}</span></div><button type="button" class="text-action" data-delm="${esc(m.id)}">삭제</button></div>`).join(''):'<div class="empty">등록된 품목 없음</div>';
+}
+function itemHTML(r,del){
+  return `<div class="item"><div><b>${esc(r.item)}</b><span><span class="tag">${esc(r.cat)}</span>${esc(r.date.slice(5))} · ${esc(r.dept)} ${esc(r.who)}${r.code?' · '+esc(r.code):''}${r.ref?'<br>'+esc(r.ref):''}${r.memo?'<br>'+esc(r.memo):''}</span></div>
+  <div style="text-align:right"><div class="q">${esc(r.qty)} ${esc(r.unit)}</div>${del?`<button type="button" class="text-action" data-delr="${esc(r.id)}">삭제</button>`:''}</div></div>`;
+}
+function renderMine(){
+  const d=$('#date').value,w=$('#name').value,dp=$('#dept').value;
+  const l=S.rec.filter(r=>r.date===d&&r.who===w&&r.dept===dp);
+  $('#mycount').textContent=l.length+'건';
+  $('#mylist').innerHTML=l.length?l.slice().reverse().map(r=>itemHTML(r,true)).join(''):'<div class="empty">입력한 내역이 없습니다</div>';
+}
+function filtered(){
+  const a=$('#f1').value,b=$('#f2').value,d=$('#fd').value,c=$('#fc').value;
+  return S.rec.filter(r=>(!a||r.date>=a)&&(!b||r.date<=b)&&(!d||r.dept===d)&&(!c||r.cat===c)).sort((x,y)=>y.date.localeCompare(x.date)||y.id.localeCompare(x.id));
+}
+function renderAll(){
+  const l=filtered();
+  const g={};l.forEach(r=>{const k=r.cat+'|'+r.item+'|'+r.unit;g[k]=(g[k]||0)+Number(r.qty)});
+  $('#sumtag').textContent=l.length+'건';
+  $('#sum').innerHTML=Object.keys(g).length?Object.entries(g).map(([k,v])=>{const [c,i,u]=k.split('|');return `<div class="item"><div><b>${esc(i)}</b><span><span class="tag">${c}</span></span></div><div class="q">${+v.toFixed(3)} ${esc(u)}</div></div>`}).join(''):'<div class="empty">내역 없음</div>';
+  $('#alllist').innerHTML=l.length?l.map(r=>itemHTML(r,true)).join(''):'<div class="empty">내역 없음</div>';
+}
+function rows(){
+  const h=['일자','부서','작성자','구분','품목코드','품목명','수량','단위','A/S번호·고객','메모'];
+  return [h,...filtered().map(r=>[r.date,r.dept,r.who,r.cat,r.code,r.item,r.qty,r.unit,r.ref,r.memo])];
+}
+const csvCell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+
+/* 이벤트 */
+$$('nav button').forEach(b=>b.onclick=()=>{
+  $$('nav button').forEach(x=>{x.classList.toggle('on',x===b);if(x===b)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current')});
+  ['p-in','p-list','p-set'].forEach(p=>$('#'+p).classList.toggle('hide',p!==b.dataset.p));
+  if(b.dataset.p==='p-list')renderAll();
+  window.scrollTo(0,0);
+});
+$$('#cat button').forEach(b=>b.onclick=()=>{cat=b.dataset.v;$$('#cat button').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',String(x===b))});fillMaster()});
+$('#dept').onchange=()=>{S.me.dept=$('#dept').value;fillNames();save();renderMine()};
+$('#name').onchange=()=>{S.me.name=$('#name').value;save();renderMine()};
+$('#date').onchange=renderMine;
+$('#qm').onclick=()=>{$('#qty').value=Math.max(0,(+$('#qty').value||0)-1)};
+$('#qp').onclick=()=>{$('#qty').value=(+$('#qty').value||0)+1};
+$('#iname').onchange=()=>{
+  const m=S.master.find(m=>m.name===$('#iname').value);
+  if(m){$('#icode').value=m.code;$('#unit').value=m.unit||'EA';if(m.cat!==cat){cat=m.cat;$$('#cat button').forEach(x=>{x.classList.toggle('on',x.dataset.v===cat);x.setAttribute('aria-pressed',String(x.dataset.v===cat))});fillMaster()}}
+};
+$('#add').onclick=()=>{
+  const who=$('#name').value,dept=$('#dept').value,item=$('#iname').value.trim(),qty=+$('#qty').value;
+  if(!dept||!who)return toast('부서와 이름을 선택하세요');
+  if(!item)return toast('품목명을 입력하세요');
+  if(!Number.isFinite(qty)||!(qty>0))return toast('0보다 큰 수량을 입력하세요');
+  if(!$('#date').value)return toast('사용 날짜를 선택하세요');
+  S.rec.push({id:uid(),date:$('#date').value,dept,who,cat,code:$('#icode').value.trim(),item,qty,unit:$('#unit').value.trim()||'EA',ref:$('#ref').value.trim(),memo:$('#memo').value.trim()});
+  S.me={dept,name:who};
+  if(!S.master.some(m=>m.name===item&&m.cat===cat))S.master.push({id:uid(),cat,code:$('#icode').value.trim(),name:item,unit:$('#unit').value.trim()||'EA'});
+  if(!save())return;fillMaster();renderMaster();renderMine();
+  ['#iname','#icode','#ref','#memo'].forEach(s=>$(s).value='');$('#qty').value=1;
+  toast('추가되었습니다 ✔');
+};
+document.addEventListener('click',e=>{
+  const t=e.target;
+  if(t.dataset.delr){if(confirm('이 내역을 삭제할까요?')){S.rec=S.rec.filter(r=>r.id!==t.dataset.delr);save();renderMine();renderAll()}}
+  if(t.dataset.deld){if(confirm(t.dataset.deld+' 부서를 삭제할까요?')){delete S.org[t.dataset.deld];save();fillOrg();renderOrg();renderMine()}}
+  if(t.dataset.deln){const[d,n]=t.dataset.deln.split('|');S.org[d]=S.org[d].filter(x=>x!==n);save();fillOrg();renderOrg();renderMine()}
+  if(t.dataset.delm){S.master=S.master.filter(m=>m.id!==t.dataset.delm);save();renderMaster();fillMaster()}
+});
+$('#adddept').onclick=()=>{const v=$('#newdept').value.trim();if(!v)return;if(Object.hasOwn(S.org,v)||['__proto__','constructor','prototype'].includes(v))return toast('이미 있는 부서');S.org[v]=[];$('#newdept').value='';save();fillOrg();renderOrg()};
+$('#addname').onclick=()=>{const d=$('#sdept').value,v=$('#newname').value.trim();if(!d||!v)return toast('부서와 이름 확인');if(S.org[d].includes(v))return toast('이미 있는 이름');S.org[d].push(v);$('#newname').value='';save();fillOrg();$('#sdept').value=d;renderOrg()};
+$('#addmaster').onclick=()=>{const n=$('#mname').value.trim();if(!n)return toast('품목명 입력');S.master.push({id:uid(),cat:$('#mcat').value,code:$('#mcode').value.trim(),name:n,unit:$('#munit').value.trim()||'EA'});['#mname','#mcode'].forEach(s=>$(s).value='');if(!save())return;renderMaster();fillMaster();toast('등록됨')};
+$('#mfile').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>{
+    let n=0;rd.result.replace(/^﻿/,'').split(/\r?\n/).forEach((ln,i)=>{
+      const c=ln.split(',').map(x=>x.replace(/^"|"$/g,'').trim());if(c.length<2||!c[1])return;
+      if(i===0&&/품목|code/i.test(c[0]+c[1]))return;
+      const ct=['재료','부품','기구'].includes(c[3])?c[3]:'부품';
+      if(!S.master.some(m=>m.code===c[0]&&m.name===c[1])){S.master.push({id:uid(),cat:ct,code:c[0],name:c[1],unit:c[2]||'EA'});n++}
+    });if(!save())return;renderMaster();fillMaster();toast(n+'개 품목 추가')};
+  rd.readAsText(f,'utf-8');
+};
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)}
+$('#csv').onclick=()=>{const r=rows();if(r.length<2)return toast('내보낼 내역이 없습니다');download('사용내역_'+today()+'.csv','﻿'+r.map(x=>x.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8')};
+$('#copy').onclick=async()=>{const r=rows();if(r.length<2)return toast('내보낼 내역이 없습니다');const t=r.map(x=>x.join('\t')).join('\n');try{await navigator.clipboard.writeText(t);toast('복사됨 – 엑셀/이카운트에 붙여넣기')}catch(e){prompt('복사하세요',t)}};
+$('#backup').onclick=()=>download('백업_'+today()+'.json',JSON.stringify(S),'application/json');
+$('#restore').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!validData(d))throw Error();if(!confirm('현재 설정과 내역을 백업 파일로 덮어쓸까요?'))return;S=d;if(!save())return;init();renderAll();toast('복원 완료')}catch(x){toast('올바른 백업 파일이 아닙니다')}};rd.readAsText(f)};
+$('#clearall').onclick=()=>{if(confirm('모든 사용 내역을 삭제합니다. CSV 저장을 먼저 하셨나요?')){S.rec=[];if(!save())return;renderMine();renderAll();toast('삭제됨')}};
+['f1','f2','fd','fc'].forEach(i=>$('#'+i).onchange=renderAll);
+
+function init(){
+  $('#date').value=today();$('#f1').value=today();$('#f2').value=today();
+  $('#hdate').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  fillOrg();fillMaster();renderOrg();renderMaster();renderMine();
+}
+load();init();
+// 탭을 여러 개 열었을 때 다른 탭의 저장 내용을 반영합니다.
+window.addEventListener('storage',e=>{if(e.key===KEY&&e.newValue){try{const d=JSON.parse(e.newValue);if(validData(d)){S=d;savedState=e.newValue;fillOrg();fillMaster();renderOrg();renderMaster();renderMine();renderAll();toast('다른 창에서 저장한 내역을 반영했습니다.')}}catch(error){}}});
+</script>
+<script src="./ecount-pwa.js" defer></script>
+</body>
+</html>
